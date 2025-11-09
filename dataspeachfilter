@@ -1,0 +1,25 @@
+let
+    Source = Xml.Tables(File.Contents("C:\Users\al\Downloads\20251023_Videlio_MairiedeParis\_TimeMic-extractMairieParis\NO\2025-10-23_22-47-7Statistic - R.xml")),
+    #"Removed Columns" = Table.RemoveColumns(Source,{"MeetingTitle", "MeetingDescription", "MeetingDate", "MeetingStartTime", "PauseTime", "ResumeTime", "MeetingEndTime", "Delegates", "Groups"}),
+    #"Expanded AgendaInformation" = Table.ExpandTableColumn(#"Removed Columns", "AgendaInformation", {"AgendaItem"}, {"AgendaInformation.AgendaItem"}),
+    #"Expanded AgendaInformation.AgendaItem" = Table.ExpandTableColumn(#"Expanded AgendaInformation", "AgendaInformation.AgendaItem", {"Title", "Session"}, {"AgendaInformation.AgendaItem.Title", "AgendaInformation.AgendaItem.Session"}),
+    #"Expanded AgendaInformation.AgendaItem.Session" = Table.ExpandTableColumn(#"Expanded AgendaInformation.AgendaItem", "AgendaInformation.AgendaItem.Session", {"StartTime", "EndTime", "Delegate"}, {"AgendaInformation.AgendaItem.Session.StartTime", "AgendaInformation.AgendaItem.Session.EndTime", "AgendaInformation.AgendaItem.Session.Delegate"}),
+    #"Expanded AgendaInformation.AgendaItem.Session.Delegate" = Table.ExpandTableColumn(#"Expanded AgendaInformation.AgendaItem.Session", "AgendaInformation.AgendaItem.Session.Delegate", {"Name", "SpeakingDuration"}, {"AgendaInformation.AgendaItem.Session.Delegate.Name", "AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration"}),
+    #"Expanded AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration" = Table.ExpandTableColumn(#"Expanded AgendaInformation.AgendaItem.Session.Delegate", "AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration", {"StartTime", "EndTime"}, {"AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.StartTime", "AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.EndTime"}),
+    #"Removed Columns1" = Table.RemoveColumns(#"Expanded AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration",{"AgendaInformation.AgendaItem.Session.StartTime", "AgendaInformation.AgendaItem.Session.EndTime"}),
+    #"Expanded AgendaInformation.AgendaItem.Title" = Table.ExpandTableColumn(#"Removed Columns1", "AgendaInformation.AgendaItem.Title", {"Element:Text"}, {"AgendaInformation.AgendaItem.Title.Element:Text"}),
+    #"Filtered Rows" = Table.SelectRows(#"Expanded AgendaInformation.AgendaItem.Title", each ([AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.StartTime] <> null)),
+    #"Changed Type" = Table.TransformColumnTypes(#"Filtered Rows",{{"AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.StartTime", type datetime}, {"AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.EndTime", type datetime}}),
+    #"Removed Duplicates" = Table.Distinct(#"Changed Type", {"AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.StartTime"}),
+    #"Added Custom" = Table.AddColumn(#"Removed Duplicates", "Duration", each [AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.EndTime] - [AgendaInformation.AgendaItem.Session.Delegate.SpeakingDuration.StartTime]),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Added Custom",{{"Duration", type duration}}),
+    // 🔹 Nouvelle étape : arrondir la durée à la seconde (supprime les millisecondes)
+    #"Rounded Duration" = Table.TransformColumns(
+        #"Changed Type1",
+        {
+            {"Duration", each #duration(0, Duration.Hours(_), Duration.Minutes(_), Number.RoundDown(Duration.Seconds(_))), type duration}
+        }
+    ),
+    #"Filtered Rows1" = Table.SelectRows(#"Rounded Duration", each [Duration] > #duration(0, 0, 0, 0))
+in
+    #"Filtered Rows1"
