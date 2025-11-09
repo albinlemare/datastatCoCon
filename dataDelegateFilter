@@ -1,0 +1,13 @@
+let
+    Source = Xml.Tables(File.Contents("C:\Users\al\Downloads\20251023_Videlio_MairiedeParis\_TimeMic-extractMairieParis\bd_participant_paris.xml")),
+    Table0 = Source{0}[Table],
+    #"Expanded Table" = Table.ExpandTableColumn(Table0, "Table", {"Table"}, {"Table.Table"}),
+    #"Expanded Table.Table" = Table.ExpandTableColumn(#"Expanded Table", "Table.Table", {"Table"}, {"Table.Table.Table"}),
+    #"Expanded Table.Table.Table" = Table.ExpandTableColumn(#"Expanded Table.Table", "Table.Table.Table", {"Users"}, {"Table.Table.Table.Users"}),
+    #"Expanded Table.Table.Table.Users" = Table.ExpandTableColumn(#"Expanded Table.Table.Table", "Table.Table.Table.Users", {"User"}, {"Table.Table.Table.Users.User"}),
+    #"Expanded Table.Table.Table.Users.User" = Table.ExpandTableColumn(#"Expanded Table.Table.Table.Users", "Table.Table.Table.Users.User", {"Title", "FirstName", "Name", "MiddleName", "Street", "PostCode", "City", "District", "Country", "Biography"},{"Table.Table.Table.Users.User.Title",  "Table.Table.Table.Users.User.FirstName", "Table.Table.Table.Users.User.Name", "Table.Table.Table.Users.User.MiddleName", "Table.Table.Table.Users.User.Street", "Table.Table.Table.Users.User.PostCode", "Table.Table.Table.Users.User.City", "Table.Table.Table.Users.User.District", "Table.Table.Table.Users.User.Country", "Table.Table.Table.Users.User.Biography"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table.Table.Table.Users.User",{{"Table.Table.Table.Users.User.FirstName", type text}, {"Table.Table.Table.Users.User.Name", type text}}),
+    #"Inserted Merged Column" = Table.AddColumn(#"Changed Type", "AgendaInformation.AgendaItem.Session.Delegate.Name", each Text.Combine({[Table.Table.Table.Users.User.FirstName], " ", [Table.Table.Table.Users.User.Name]}), type text),
+    #"Removed Columns" = Table.RemoveColumns(#"Inserted Merged Column",{"Name", "Table.Table.Table.Users.User.FirstName", "Table.Table.Table.Users.User.Name"})
+in
+    #"Removed Columns"
